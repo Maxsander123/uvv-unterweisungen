@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Anmelden{% endblock %}
+{% block content %}
+<section class="hero hero-compact">
+  <p class="eyebrow">Verwaltung</p>
+  <h1>Anmelden</h1>
+  <p class="lead">Nur für Admins und Verwalter. Für eine Unterweisung brauchst du keine Anmeldung.</p>
+</section>
+<section class="card narrow">
+  {% if no_users %}
+  <div class="alert alert-info">Es gibt noch keinen Benutzer. Setze <code>ADMIN_USER</code> und <code>ADMIN_PASSWORD</code> in der docker-compose.yml und starte den Container neu – dann wird der erste Admin angelegt.</div>
+  {% endif %}
+  {% if error %}<div class="alert alert-error">{{ error }}</div>{% endif %}
+  <form method="post" class="name-form">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label>Benutzername
+      <input name="username" value="{{ username }}" required autocomplete="username" autocapitalize="none" autofocus>
+    </label>
+    <label>Passwort
+      <input type="password" name="password" required autocomplete="current-password">
+    </label>
+    <button class="btn" type="submit">Anmelden</button>
+  </form>
+</section>
+{% endblock %}

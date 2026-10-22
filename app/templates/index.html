@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">{{ app_name }}</p>
+  <h1>{{ cfg.home_headline }}</h1>
+  {% if cfg.home_lead %}<p class="lead">{{ cfg.home_lead }}</p>{% endif %}
+</section>
+
+{% if trainings %}
+<div class="training-list">
+  {% for t in trainings %}
+  <a class="card training-item" href="{{ url_for('training', slug=t.slug) }}">
+    <span class="training-text">
+      <span class="training-kicker">{{ interval_label(t.valid_months) }}</span>
+      <span class="training-title">{{ t.headline }}</span>
+      {% if t.description %}<span class="training-desc">{{ t.description }}</span>{% endif %}
+      <span class="training-meta">{{ t.count }} Fragen · bestanden ab {{ t.pass_min }} richtigen Antworten</span>
+    </span>
+    <span class="training-go" aria-hidden="true">›</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<section class="card"><p class="muted">Zurzeit sind keine Unterweisungen freigeschaltet.</p></section>
+{% endif %}
+{% endblock %}

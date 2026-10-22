@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block title %}{{ t.headline or 'Neue Unterweisung' }}{% endblock %}
+{% block content %}
+<section class="hero hero-compact">
+  <p class="eyebrow"><a href="{{ url_for('admin') }}">Unterweisungen</a></p>
+  <h1>{{ t.headline if t.id else 'Neue Unterweisung' }}</h1>
+  {% if t.id %}<p class="lead">Zuletzt geändert {{ t.updated_at[:10] }}{% if t.updated_by %} von {{ t.updated_by }}{% endif %}. Bereits ausgestellte Nachweise behalten den Stand, mit dem sie abgelegt wurden.</p>{% endif %}
+</section>
+{% include "_flash.html" %}
+{% if errors %}<div class="alert alert-error">{% for e in errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+
+<form method="post" id="training-form" class="editor">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <input type="hidden" name="questions" id="questions-json">
+
+  <section class="card">
+    <h2>Grunddaten</h2>
+    <div class="name-form">
+      <label>Überschrift auf der Startseite
+        <input name="headline" value="{{ t.headline }}" required maxlength="120" placeholder="z. B. Sicherer Umgang mit der Motorkettensäge">
+      </label>
+      <label>Kurzbeschreibung
+        <input name="description" value="{{ t.description }}" maxlength="300" placeholder="Ein Satz, worum es geht. Steht auf der Startseite und im PDF unter „Thema“.">
+      </label>
+      <div class="field-row">
+        <label>Vollständiger Titel
+          <input name="title" value="{{ t.title }}" required maxlength="120">
+          <span class="help">Steht im Nachweis-Text, z. B. „UVV-Unterweisung Motorkettensäge“.</span>
+        </label>
+        <label>Kurzname
+          <input name="short_name" value="{{ t.short_name }}" required maxlength="40" id="short-name">
+          <span class="help">Für PDF-Kopf, Dateiname und Mail-Betreff, z. B. „Motorkettensäge“.</span>
+        </label>
+      </div>
+      <div class="field-row">
+        <label>Webadresse
+          <span class="input-prefix"><span>/unterweisung/</span><input name="slug" value="{{ t.slug }}" maxlength="40" id="slug" pattern="[a-z0-9-]*" placeholder="wird aus dem Kurznamen erzeugt"></span>
+          {% if t.id %}<span class="help">Ändern nur, wenn der alte Link nirgends mehr verschickt ist.</span>{% endif %}
+        </label>
+        <label>Reihenfolge auf der Startseite
+          <input type="number" name="sort_order" value="{{ t.sort_order }}" min="0" max="9999">
+          <span class="help">Kleinere Zahl steht weiter oben.</span>
+        </label>
+      </div>
+      <label class="check">
+        <input type="checkbox" name="active" value="1" {{ 'checked' if t.active }}>
+        <span><strong>Freigeschaltet</strong> – erscheint auf der Startseite und kann gemacht werden.</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Inhalte der Unterweisung</h2>
+    <p class="muted">Jeder Abschnitt beginnt mit <code>## Überschrift</code>, darunter ein Punkt pro Zeile mit <code>- </code>. Die Inhalte stehen auf der Seite der Unterweisung und ab Seite 2 im PDF.</p>
+    <textarea name="content" rows="18" class="code" placeholder="## Gefährdungen&#10;- Erster Punkt&#10;- Zweiter Punkt&#10;&#10;## Schutzausrüstung&#10;- …">{{ content_text }}</textarea>
+  </section>
+
+  <section class="card">
+    <h2>Fragen</h2>
+    <p class="muted">Teilnehmer bekommen alle Fragen in zufälliger Reihenfolge, die Antworten werden ebenfalls gemischt. Markiere bei jeder Frage die richtige Antwort. Die Erklärung sieht nur, wer die Frage falsch beantwortet hat.</p>
+    <div id="questions"></div>
+    <button class="btn btn-ghost" type="button" id="add-question">+ Frage hinzufügen</button>
+  </section>
+
+  <section class="card">
+    <h2>Bewertung und Gültigkeit</h2>
+    <div class="field-row">
+      <label>Bestehen ab (% richtige Antworten)
+        <input type="number" name="pass_percent" value="{{ t.pass_percent }}" min="1" max="100" required id="pass-percent">
+        <span class="help" id="pass-help"></span>
+      </label>
+      <label>Gültigkeit des Nachweises (Monate)
+        <input type="number" name="valid_months" value="{{ t.valid_months }}" min="1" max="120" required>
+        <span class="help">12 = jährliche Unterweisung</span>
+      </label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Nachweis und Mailversand</h2>
+    <div class="name-form">
+      <label>Mailempfänger der Nachweise
+        <textarea name="mail_to" rows="2" placeholder="drohne@feuerwehr-musterstadt.de, leitung@…">{{ t.mail_to }}</textarea>
+        <span class="help">Eine oder mehrere Adressen, getrennt durch Komma oder Zeilenumbruch. Ohne Empfänger wird der Knopf „{{ cfg.mail_button }}“ für diese Unterweisung ausgeblendet.</span>
+      </label>
+      <label>Untertitel im PDF
+        <input name="subtitle" value="{{ t.subtitle }}" maxlength="160">
+      </label>
+      <label>Rechtliche Grundlagen (Kleingedrucktes im PDF)
+        <textarea name="legal" rows="3" maxlength="1000">{{ t.legal }}</textarea>
+      </label>
+    </div>
+  </section>
+
+  <div class="actions sticky-actions">
+    <button class="btn" type="submit">Speichern</button>
+    {% if t.id %}<a class="btn btn-ghost" href="{{ url_for('training', slug=t.slug) }}" target="_blank" rel="noopener">Vorschau</a>{% endif %}
+    <a class="btn btn-ghost" href="{{ url_for('admin') }}">Zurück</a>
+  </div>
+</form>
+
+{% if t.id %}
+<section class="card danger-zone">
+  <h2>Weitere Aktionen</h2>
+  <div class="actions">
+    <form method="post" action="{{ url_for('admin_training_copy', tid=t.id) }}" class="inline-form">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-ghost" type="submit">Als Vorlage kopieren</button>
+    </form>
+    <form method="post" action="{{ url_for('admin_training_delete', tid=t.id) }}" class="inline-form" onsubmit="return confirm('Unterweisung wirklich löschen?');">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-dark" type="submit">Löschen</button>
+    </form>
+  </div>
+  <p class="hint">Löschen geht nur, solange es keine Nachweise gibt. Sonst einfach „Freigeschaltet“ abwählen.</p>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var data = {{ questions|tojson }};
+  var list = document.getElementById('questions');
+  var form = document.getElementById('training-form');
+  var uid = 0;
+
+  function el(tag, attrs, children) {
+    var e = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      if (k === 'text') e.textContent = attrs[k];
+      else if (k === 'value') e.value = attrs[k];
+      else e.setAttribute(k, attrs[k]);
+    });
+    (children || []).forEach(function (c) { e.appendChild(c); });
+    return e;
+  }
+
+  function optionRow(card, text, checked) {
+    var name = card.dataset.radio;
+    var row = el('div', { 'class': 'opt-row' });
+    var radio = el('input', { type: 'radio', name: name, title: 'Richtige Antwort' });
+    radio.checked = !!checked;
+    var input = el('input', { 'class': 'opt-text', maxlength: '300', placeholder: 'Antwort', value: text || '' });
+    var del = el('button', { type: 'button', 'class': 'icon-btn', title: 'Antwort entfernen', text: '×' });
+    del.addEventListener('click', function () {
+      if (card.querySelectorAll('.opt-row').length > 2) { row.remove(); }
+    });
+    row.appendChild(radio); row.appendChild(input); row.appendChild(del);
+    return row;
+  }
+
+  function questionCard(q) {
+    q = q || { text: '', options: ['', '', '', ''], correct: 0, explain: '' };
+    var card = el('fieldset', { 'class': 'q-card' });
+    card.dataset.id = q.id || '';
+    card.dataset.radio = 'correct-' + (uid++);
+    var head = el('div', { 'class': 'q-head' }, [
+      el('span', { 'class': 'qnum' }),
+      el('span', { 'class': 'spacer' }),
+    ]);
+    [['↑', 'Nach oben', -1], ['↓', 'Nach unten', 1]].forEach(function (b) {
+      var btn = el('button', { type: 'button', 'class': 'icon-btn', title: b[1], text: b[0] });
+      btn.addEventListener('click', function () {
+        if (b[2] < 0 && card.previousElementSibling) list.insertBefore(card, card.previousElementSibling);
+        if (b[2] > 0 && card.nextElementSibling) list.insertBefore(card.nextElementSibling, card);
+        renumber();
+      });
+      head.appendChild(btn);
+    });
+    var del = el('button', { type: 'button', 'class': 'icon-btn', title: 'Frage löschen', text: '🗑' });
+    del.addEventListener('click', function () {
+      if (confirm('Frage löschen?')) { card.remove(); renumber(); }
+    });
+    head.appendChild(del);
+    card.appendChild(head);
+
+    card.appendChild(el('label', {}, [document.createTextNode('Frage'),
+      el('textarea', { 'class': 'q-text', rows: '2', maxlength: '500', value: q.text })]));
+    var opts = el('div', { 'class': 'opts' });
+    card.appendChild(el('div', { 'class': 'opts-label', text: 'Antworten – die richtige anklicken' }));
+    card.appendChild(opts);
+    q.options.forEach(function (o, i) { opts.appendChild(optionRow(card, o, i === q.correct)); });
+    var add = el('button', { type: 'button', 'class': 'link-btn', text: '+ Antwort' });
+    add.addEventListener('click', function () {
+      if (opts.children.length < 8) opts.appendChild(optionRow(card, '', false));
+    });
+    card.appendChild(add);
+    card.appendChild(el('label', {}, [document.createTextNode('Erklärung bei falscher Antwort (optional)'),
+      el('textarea', { 'class': 'q-explain', rows: '2', maxlength: '600', value: q.explain || '' })]));
+    return card;
+  }
+
+  function renumber() {
+    var cards = list.querySelectorAll('.q-card');
+    cards.forEach(function (c, i) { c.querySelector('.qnum').textContent = i + 1; });
+    var pct = parseInt(document.getElementById('pass-percent').value, 10) || 0;
+    var n = cards.length, need = Math.ceil(n * pct / 100);
+    document.getElementById('pass-help').textContent = n ? ('= ' + need + ' von ' + n + ' Fragen') : '';
+  }
+
+  data.forEach(function (q) { list.appendChild(questionCard(q)); });
+  if (!data.length) list.appendChild(questionCard());
+  renumber();
+  document.getElementById('pass-percent').addEventListener('input', renumber);
+  document.getElementById('add-question').addEventListener('click', function () {
+    var c = questionCard(); list.appendChild(c); renumber(); c.querySelector('.q-text').focus();
+  });
+
+  // Webadresse aus dem Kurznamen vorschlagen, solange sie leer ist
+  var slug = document.getElementById('slug');
+  var touched = !!slug.value;
+  slug.addEventListener('input', function () { touched = true; });
+  document.getElementById('short-name').addEventListener('input', function (e) {
+    if (touched) return;
+    slug.value = e.target.value.toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue')
+      .replace(/ß/g, 'ss').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+  });
+
+  form.addEventListener('submit', function () {
+    var out = [];
+    list.querySelectorAll('.q-card').forEach(function (c) {
+      var options = [], correct = -1;
+      c.querySelectorAll('.opt-row').forEach(function (r) {
+        var text = r.querySelector('.opt-text').value.trim();
+        if (!text) return;
+        if (r.querySelector('input[type=radio]').checked) correct = options.length;
+        options.push(text);
+      });
+      out.push({ id: c.dataset.id, text: c.querySelector('.q-text').value.trim(), options: options,
+                 correct: correct, explain: c.querySelector('.q-explain').value.trim() });
+    });
+    document.getElementById('questions-json').value = JSON.stringify(out);
+  });
+})();
+</script>
+{% endblock %}

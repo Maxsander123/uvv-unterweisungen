@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Nachweis prüfen{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('index') }}">‹ Alle Unterweisungen</a>
+{% if r %}
+<section class="verify {{ 'verify-ok' if r.is_valid else 'verify-expired' }}">
+  <div class="verify-badge" aria-hidden="true">{{ '✓' if r.is_valid else '!' }}</div>
+  <p class="eyebrow">Nachweis {{ t.title }}</p>
+  <h1>{{ 'Gültig' if r.is_valid else 'Abgelaufen' }}</h1>
+  <p class="verify-date">Unterwiesen am <strong>{{ r.date_str }}</strong></p>
+</section>
+
+<section class="card">
+  <dl class="facts">
+    <div><dt>Name</dt><dd>{{ r.name }}</dd></div>
+    <div><dt>Unterweisung</dt><dd>{{ t.short_name }}</dd></div>
+    <div><dt>Datum der Unterweisung</dt><dd>{{ r.datetime_str }}</dd></div>
+    <div><dt>Wissensüberprüfung</dt><dd>bestanden</dd></div>
+    <div><dt>Gültig bis</dt><dd>{{ r.valid_str }}</dd></div>
+    <div><dt>Nachweis-ID</dt><dd class="mono">{{ r.short_id }}</dd></div>
+  </dl>
+  <p class="hint">Die Unterweisung ist {{ t.valid_months }} Monate gültig und muss danach wiederholt werden.</p>
+</section>
+{% else %}
+<section class="verify verify-expired">
+  <div class="verify-badge" aria-hidden="true">?</div>
+  <p class="eyebrow">Nachweis prüfen</p>
+  <h1>Nicht gefunden</h1>
+  <p class="verify-date">Zu diesem Code gibt es keinen Nachweis.</p>
+</section>
+{% endif %}
+{% endblock %}

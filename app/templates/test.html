@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Test · {{ t.headline }}{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('training', slug=t.slug) }}">‹ Zurück zu den Inhalten</a>
+<section class="hero hero-compact">
+  <p class="eyebrow">Wissensüberprüfung · {{ t.short_name }}</p>
+  <h1>Hallo {{ person.first_name }}!</h1>
+  <p class="lead">Wähle bei jeder Frage die richtige Antwort. Zum Bestehen brauchst du {{ t.pass_min }} von {{ questions|length }} richtigen Antworten.</p>
+</section>
+
+<div class="progress" aria-hidden="true"><div class="progress-bar" id="bar"></div></div>
+<p class="progress-label" id="progress-label">0 von {{ questions|length }} beantwortet</p>
+
+<form method="post" action="{{ url_for('evaluate', slug=t.slug) }}" id="quiz">
+  {% for q in questions %}
+  <fieldset class="card question">
+    <legend><span class="qnum">{{ loop.index }}</span>{{ q.text }}</legend>
+    {% for key, text in q.options %}
+    <label class="option">
+      <input type="radio" name="{{ q.id }}" value="{{ key }}" required>
+      <span>{{ text }}</span>
+    </label>
+    {% endfor %}
+  </fieldset>
+  {% endfor %}
+  <button class="btn btn-wide" type="submit">Test abgeben</button>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+  (function () {
+    var form = document.getElementById('quiz');
+    var total = form.querySelectorAll('fieldset.question').length;
+    function update() {
+      var done = new Set(Array.from(form.querySelectorAll('input[type=radio]:checked')).map(function (i) { return i.name; })).size;
+      document.getElementById('bar').style.width = (done / total * 100) + '%';
+      document.getElementById('progress-label').textContent = done + ' von ' + total + ' beantwortet';
+    }
+    form.addEventListener('change', update);
+    update();
+  })();
+</script>
+{% endblock %}

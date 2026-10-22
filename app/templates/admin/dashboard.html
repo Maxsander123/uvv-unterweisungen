@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Unterweisungen verwalten{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<section class="hero hero-compact">
+  <p class="eyebrow">Verwaltung</p>
+  <h1>Unterweisungen</h1>
+  <p class="lead">Freigeschaltete Unterweisungen stehen auf der Startseite. Inhalte, Fragen und Mailempfänger stellst du pro Unterweisung ein.</p>
+  <div class="actions"><a class="btn" href="{{ url_for('admin_training') }}">Neue Unterweisung</a></div>
+</section>
+{% include "_flash.html" %}
+{% if not mail_enabled %}
+<div class="alert alert-info">Der Mailversand ist auf dem Server nicht eingerichtet (SMTP_HOST fehlt). Der Knopf „{{ cfg.mail_button }}“ wird deshalb nirgends angezeigt.</div>
+{% endif %}
+
+<section class="card table-card">
+  <div class="table-scroll">
+    <table class="table">
+      <thead><tr><th>Unterweisung</th><th>Status</th><th>Fragen</th><th>Mail an</th><th>Nachweise</th><th>Letzter</th><th></th></tr></thead>
+      <tbody>
+      {% for t in trainings %}
+        <tr>
+          <td><a href="{{ url_for('admin_training', tid=t.id) }}"><strong>{{ t.headline }}</strong></a><br><span class="small mono">/unterweisung/{{ t.slug }}</span></td>
+          <td><span class="pill {{ 'pill-ok' if t.active else 'pill-off' }}">{{ 'freigeschaltet' if t.active else 'inaktiv' }}</span></td>
+          <td>{{ t.count }} (ab {{ t.pass_min }})</td>
+          <td class="wrap-cell">{{ t.mail_list|join(', ') or '–' }}</td>
+          <td><a href="{{ url_for('admin_results', u=t.slug) }}">{{ t.n }}</a></td>
+          <td>{{ t.last_str or '–' }}</td>
+          <td class="row-actions">
+            <a href="{{ url_for('training', slug=t.slug) }}" target="_blank" rel="noopener">Ansehen</a>
+            <a href="{{ url_for('admin_training', tid=t.id) }}">Bearbeiten</a>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7">Noch keine Unterweisungen.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

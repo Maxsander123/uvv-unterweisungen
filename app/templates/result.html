@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Bestanden{% endblock %}
+{% block content %}
+<a class="back-link" href="{{ url_for('index') }}">‹ Alle Unterweisungen</a>
+<section class="hero hero-compact">
+  <p class="eyebrow">Ergebnis</p>
+  <h1>Bestanden, {{ r.first_name }}!</h1>
+  <p class="lead">Du hast die {{ t.title }} am {{ r.datetime_str }} abgeschlossen.
+    {% if not r.signed %}Unterschreibe jetzt deinen Nachweis{% if mail_enabled %} und schick ihn ab{% endif %}.{% endif %}</p>
+</section>
+
+{% include "_flash.html" %}
+
+<div class="score score-pass">
+  <span class="score-num">{{ r.score }}<small>/{{ r.total }}</small></span>
+  <span class="score-label">richtige Antworten</span>
+</div>
+
+{% if review is not none %}
+<section class="card" id="auswertung">
+  {% if review %}
+  <h2>Das solltest du dir noch einmal anschauen</h2>
+  <p class="muted">Diese {{ review|length }} Frage{{ 'n' if review|length != 1 }} hast du falsch beantwortet. Die richtige Antwort und die Erklärung helfen dir beim nächsten Mal.</p>
+  {% for w in review %}
+  <div class="review review-item">
+    <h3>{{ w.text }}</h3>
+    <p class="answer wrong"><strong>Deine Antwort:</strong> {{ w.given }}</p>
+    <p class="answer right"><strong>Richtig:</strong> {{ w.correct }}</p>
+    {% if w.explain %}<p class="explain">{{ w.explain }}</p>{% endif %}
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="done-line">✓ Alle Fragen richtig beantwortet – stark!</p>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="card">
+  <dl class="facts">
+    <div><dt>Name</dt><dd>{{ r.name }}</dd></div>
+    <div><dt>Datum</dt><dd>{{ r.datetime_str }}</dd></div>
+    <div><dt>Gültig bis</dt><dd>{{ r.valid_str }}</dd></div>
+    <div><dt>Nachweis-ID</dt><dd class="mono">{{ r.short_id }}</dd></div>
+  </dl>
+</section>
+
+<section class="card" id="unterschrift">
+  <h2><span class="step-dot {{ 'done' if r.signed }}">1</span>Unterschreiben</h2>
+  {% if r.signed %}
+    <p class="done-line">✓ Unterschrieben am {{ r.signed_str }}. Die Unterschrift ist im PDF enthalten.</p>
+  {% else %}
+    <p class="muted">Unterschreibe mit dem Finger, einem Stift oder der Maus im Feld. Die Unterschrift wird mit Ort und Datum ({{ sign_place }}) in den Nachweis übernommen und kann danach nicht mehr geändert werden.</p>
+    <form method="post" action="{{ url_for('sign', token=r.token) }}" id="sign-form">
+      <div class="sig-wrap">
+        <canvas id="sig-pad" aria-label="Unterschriftsfeld"></canvas>
+        <span class="sig-line" aria-hidden="true"></span>
+        <span class="sig-hint" id="sig-hint">Hier unterschreiben</span>
+      </div>
+      <input type="hidden" name="signature" id="sig-data">
+      <div class="actions">
+        <button class="btn" type="submit" id="sig-save" disabled>Unterschrift übernehmen</button>
+        <button class="btn btn-ghost" type="button" id="sig-clear">Löschen</button>
+      </div>
+    </form>
+  {% endif %}
+</section>
+
+<section class="card" id="aktionen">
+  <h2><span class="step-dot {{ 'done' if r.mailed_at }}">2</span>Nachweis</h2>
+  <div class="actions">
+    <a class="btn {{ 'btn-ghost' if not r.signed }}" href="{{ url_for('certificate', token=r.token) }}" target="_blank" rel="noopener">PDF ansehen</a>
+    <a class="btn btn-ghost" href="{{ url_for('certificate', token=r.token, download=1) }}">PDF herunterladen</a>
+    {% if mail_enabled %}
+    <form method="post" action="{{ url_for('mail', token=r.token) }}" class="inline-form" id="mail-form">
+      <button class="btn btn-dark" type="submit" {{ 'disabled' if not r.signed }}>{{ cfg.mail_button }}</button>
+    </form>
+    {% endif %}
+  </div>
+  {% if mail_enabled %}
+    {% if r.mailed_at %}
+      <p class="done-line">✓ Am {{ r.mailed_str }} an {{ mailed_to }} verschickt.</p>
+    {% elif not r.signed %}
+      <p class="hint">Der Mailversand an {{ mail_to }} ist nach dem Unterschreiben möglich.</p>
+    {% else %}
+      <p class="hint">Schickt den unterschriebenen Nachweis als PDF an {{ mail_to }}.</p>
+    {% endif %}
+  {% endif %}
+  <p class="hint">Der QR-Code im PDF führt auf eine Prüfseite mit dem Datum der Unterweisung. Speichere dir diese Seite oder das PDF – der Link im PDF bringt dich jederzeit hierher zurück.</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% if not r.signed %}
+<script>
+(function () {
+  var canvas = document.getElementById('sig-pad');
+  var ctx = canvas.getContext('2d');
+  var save = document.getElementById('sig-save');
+  var hint = document.getElementById('sig-hint');
+  var drawing = false, hasInk = false, last = null, strokes = [];
+
+  function resize() {
+    // Größe an das Feld anpassen, scharf auf Retina-Displays; vorhandene Striche neu zeichnen
+    var ratio = Math.max(window.devicePixelRatio || 1, 1);
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = Math.round(rect.width * ratio);
+    canvas.height = Math.round(rect.height * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#0b2a6f';
+    redraw();
+  }
+  function redraw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    strokes.forEach(function (s) { for (var i = 1; i < s.length; i++) seg(s[i - 1], s[i]); });
+  }
+  function seg(a, b) {
+    ctx.lineWidth = b.w;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  function pos(e) {
+    var r = canvas.getBoundingClientRect();
+    var p = e.pressure && e.pointerType === 'pen' ? e.pressure : 0.5;
+    return { x: e.clientX - r.left, y: e.clientY - r.top, w: 1.6 + p * 2.4 };
+  }
+  canvas.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    canvas.setPointerCapture(e.pointerId);
+    drawing = true; last = pos(e); strokes.push([last]);
+    seg(last, { x: last.x + 0.1, y: last.y + 0.1, w: last.w });
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (!drawing) return;
+    e.preventDefault();
+    var events = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+    events.forEach(function (ev) {
+      var p = pos(ev); seg(last, p); strokes[strokes.length - 1].push(p); last = p;
+    });
+    if (!hasInk) { hasInk = true; save.disabled = false; hint.hidden = true; }
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) {
+    canvas.addEventListener(t, function () { drawing = false; });
+  });
+  document.getElementById('sig-clear').addEventListener('click', function () {
+    strokes = []; hasInk = false; save.disabled = true; hint.hidden = false; redraw();
+  });
+  document.getElementById('sign-form').addEventListener('submit', function (e) {
+    if (!hasInk) { e.preventDefault(); return; }
+    document.getElementById('sig-data').value = canvas.toDataURL('image/png');
+    save.disabled = true; save.textContent = 'Wird gespeichert …';
+  });
+  var w = window.innerWidth;
+  window.addEventListener('resize', function () {
+    if (window.innerWidth !== w) { w = window.innerWidth; resize(); }  // nicht bei Mobil-Adressleiste
+  });
+  resize();
+})();
+</script>
+{% endif %}
+<script>
+  var mf = document.getElementById('mail-form');
+  if (mf) mf.addEventListener('submit', function () {
+    var b = mf.querySelector('button'); b.disabled = true; b.textContent = 'Wird gesendet …';
+  });
+</script>
+{% endblock %}

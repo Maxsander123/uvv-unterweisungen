@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Einstellungen{% endblock %}
+{% block content %}
+<section class="hero hero-compact">
+  <p class="eyebrow">Verwaltung</p>
+  <h1>Einstellungen</h1>
+  <p class="lead">Name, Logo, Farbe und Texte der ganzen Seite. Alles hier gilt für die Startseite, alle Unterweisungen und die PDF-Nachweise.</p>
+</section>
+{% include "_flash.html" %}
+{% if errors %}<div class="alert alert-error">{% for e in errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+<form method="post" enctype="multipart/form-data" class="editor">
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+  <section class="card">
+    <h2>Logo</h2>
+    <div class="logo-row">
+      <div class="logo-preview">
+        {% if has_logo %}<img src="{{ url_for('logo', v=logo_v) }}" alt="Aktuelles Logo">{% else %}<span class="small">kein Logo</span>{% endif %}
+      </div>
+      <div class="name-form">
+        <label>Neues Logo hochladen
+          <input type="file" name="logo" accept="image/png,image/jpeg,image/webp">
+          <span class="help">PNG mit transparentem Hintergrund sieht am besten aus. Erscheint im Seitenkopf, als Browser-Icon und im PDF.</span>
+        </label>
+        {% if has_logo %}
+        <label class="check"><input type="checkbox" name="remove_logo" value="1"><span>Logo entfernen</span></label>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+  {% set groups = [
+    ('Organisation und Kopfzeile', ['org_name', 'brand_top', 'brand_bottom', 'app_name', 'primary_color']),
+    ('Startseite', ['home_headline', 'home_lead']),
+    ('Nachweis', ['sign_place', 'mail_button']),
+    ('Fußzeile', ['impressum_url', 'datenschutz_url', 'footer_text']),
+  ] %}
+  {% for title, keys in groups %}
+  <section class="card">
+    <h2>{{ title }}</h2>
+    <div class="name-form">
+    {% for key, label, default, kind, help in fields if key in keys %}
+      <label>{{ label }}
+        {% if kind == 'textarea' %}
+        <textarea name="{{ key }}" rows="3">{{ values[key] }}</textarea>
+        {% elif kind == 'color' %}
+        <span class="color-row">
+          <input type="color" value="{{ values[key] }}" oninput="this.nextElementSibling.value = this.value.toUpperCase()">
+          <input name="{{ key }}" value="{{ values[key] }}" pattern="#[0-9a-fA-F]{6}" maxlength="7" oninput="if (/^#[0-9a-fA-F]{6}$/.test(this.value)) this.previousElementSibling.value = this.value">
+        </span>
+        {% else %}
+        <input {% if kind == 'url' %}type="url" placeholder="https://"{% endif %} name="{{ key }}" value="{{ values[key] }}" maxlength="300">
+        {% endif %}
+        {% if help %}<span class="help">{{ help }}</span>{% endif %}
+      </label>
+    {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+  <div class="actions sticky-actions">
+    <button class="btn" type="submit">Speichern</button>
+  </div>
+</form>
+{% endblock %}

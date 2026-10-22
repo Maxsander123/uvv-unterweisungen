@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Wiederherstellungscodes{% endblock %}
+{% block content %}
+<section class="hero hero-compact">
+  <p class="eyebrow">Mein Konto</p>
+  <h1>{{ 'Zwei-Faktor-Anmeldung ist aktiv' if first else 'Neue Wiederherstellungscodes' }}</h1>
+  <p class="lead">Bewahre diese Codes sicher auf, z. B. ausgedruckt oder im Passwort-Manager. Jeder Code funktioniert einmal, falls du keinen Zugriff auf die App hast.{% if not first %} Die alten Codes gelten nicht mehr.{% endif %}</p>
+</section>
+<section class="card">
+  <div class="alert alert-info">Die Codes werden nur jetzt angezeigt.</div>
+  <ul class="recovery-codes mono" id="codes">
+    {% for c in codes %}<li>{{ c }}</li>{% endfor %}
+  </ul>
+  <div class="actions">
+    <button class="btn btn-ghost" type="button" id="copy">Kopieren</button>
+    <button class="btn btn-ghost" type="button" onclick="window.print()">Drucken</button>
+    <a class="btn" href="{{ url_for('admin_account') }}">Fertig</a>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById('copy').addEventListener('click', function () {
+    var text = Array.from(document.querySelectorAll('#codes li')).map(function (l) { return l.textContent; }).join('\n');
+    navigator.clipboard.writeText(text).then(function () { document.getElementById('copy').textContent = 'Kopiert ✓'; });
+  });
+</script>
+{% endblock %}

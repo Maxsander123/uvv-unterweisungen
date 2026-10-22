@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="{{ theme.primary }}">
+  <title>{% block title %}{{ app_name }}{% endblock %} · {{ org_name }}</title>
+  {% if logo_v %}<link rel="icon" type="image/png" href="{{ url_for('logo', v=logo_v) }}">{% endif %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>:root { --red: {{ theme.primary }}; --red-dark: {{ theme.dark }}; --red-soft: {{ theme.soft }}; }</style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="{{ url_for('index') }}">
+        {% if logo_v %}<img src="{{ url_for('logo', v=logo_v) }}" alt="Logo {{ org_name }}">{% endif %}
+        <span class="brand-text">
+          {% if cfg.brand_top %}<span class="brand-top">{{ cfg.brand_top }}</span>{% endif %}
+          {% if cfg.brand_bottom %}<span class="brand-bottom">{{ cfg.brand_bottom }}</span>{% endif %}
+        </span>
+      </a>
+      <a class="header-tag" href="{{ url_for('index') }}">{{ app_name }}</a>
+    </div>
+  </header>
+  {% if current_user %}
+  <nav class="admin-nav">
+    <div class="wrap admin-nav-inner">
+      <a href="{{ url_for('admin') }}" class="{{ 'on' if request.endpoint in ('admin', 'admin_training') }}">Unterweisungen</a>
+      <a href="{{ url_for('admin_results') }}" class="{{ 'on' if request.endpoint == 'admin_results' }}">Nachweise</a>
+      {% if current_user.role == 'admin' %}
+      <a href="{{ url_for('admin_users') }}" class="{{ 'on' if request.endpoint in ('admin_users', 'admin_user') }}">Benutzer</a>
+      <a href="{{ url_for('admin_settings') }}" class="{{ 'on' if request.endpoint == 'admin_settings' }}">Einstellungen</a>
+      {% endif %}
+      <span class="spacer"></span>
+      <a href="{{ url_for('admin_account') }}" class="{{ 'on' if request.endpoint == 'admin_account' }}" title="Mein Konto">{{ current_user.name or current_user.username }}</a>
+      <form method="post" action="{{ url_for('logout') }}" class="inline-form">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <button class="nav-btn" type="submit">Abmelden</button>
+      </form>
+    </div>
+  </nav>
+  {% endif %}
+
+  <main class="wrap {% block main_class %}{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>{{ org_name }} · {{ year }}{% if cfg.footer_text %} · {{ cfg.footer_text }}{% endif %}</span>
+      <span class="footer-links">
+        {% if cfg.impressum_url %}<a href="{{ cfg.impressum_url }}" target="_blank" rel="noopener">Impressum</a>{% endif %}
+        {% if cfg.datenschutz_url %}<a href="{{ cfg.datenschutz_url }}" target="_blank" rel="noopener">Datenschutz</a>{% endif %}
+        {% if not current_user %}<a href="{{ url_for('login') }}">Verwaltung</a>{% endif %}
+      </span>
+    </div>
+  </footer>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

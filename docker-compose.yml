@@ -1,0 +1,29 @@
+# UVV Unterweisungen
+# Alle Einstellungen und Zugangsdaten stehen in der Datei .env (Vorlage: .env.example).
+services:
+  uvv-unterweisungen:
+    build: .
+    image: uvv-unterweisungen:latest
+    container_name: uvv-unterweisungen
+    restart: unless-stopped
+    env_file: .env
+    # Die Werte in ${...} kommen aus der .env (z. B. DOMAIN=uvv.example.org)
+    environment:
+      BASE_URL: "https://${DOMAIN}"   # öffentliche Adresse, steht im QR-Code
+    ports:
+      - "${HTTP_PORT}:8000"
+    volumes:
+      - "${DATA_PATH}:/data"          # Datenbank und Logo auf dem Server
+
+    # --- Variante hinter Traefik: "ports" oben entfernen und diese Labels aktivieren ---
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.uvv-unterweisungen.rule=Host(`${DOMAIN}`)"
+    #   - "traefik.http.routers.uvv-unterweisungen.entrypoints=websecure"
+    #   - "traefik.http.routers.uvv-unterweisungen.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.uvv-unterweisungen.loadbalancer.server.port=8000"
+    # networks:
+    #   - traefik
+# networks:
+#   traefik:
+#     external: true

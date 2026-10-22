@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Nicht gefunden{% endblock %}
+{% block content %}
+<section class="hero hero-compact">
+  {% if forbidden %}
+  <p class="eyebrow">Fehler 403</p>
+  <h1>Kein Zugriff</h1>
+  <p class="lead">Für diese Seite fehlt dir die Berechtigung.</p>
+  {% else %}
+  <p class="eyebrow">Fehler 404</p>
+  <h1>Seite nicht gefunden</h1>
+  <p class="lead">Diese Seite gibt es nicht (mehr).</p>
+  {% endif %}
+  <div class="actions"><a class="btn" href="{{ url_for('index') }}">Zur Startseite</a></div>
+</section>
+{% endblock %}

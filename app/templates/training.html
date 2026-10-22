@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ t.headline }}{% endblock %}
+{% block content %}
+{% if not t.active %}<div class="alert alert-info">Vorschau: Diese Unterweisung ist noch nicht freigeschaltet und für Teilnehmer nicht sichtbar.</div>{% endif %}
+<a class="back-link" href="{{ url_for('index') }}">‹ Alle Unterweisungen</a>
+<section class="hero">
+  <p class="eyebrow">{{ interval_label(t.valid_months) }}</p>
+  <h1>{{ t.headline }}</h1>
+  {% if t.description %}<p class="lead lead-strong">{{ t.description }}</p>{% endif %}
+  <p class="lead">Lies dir die Inhalte der Unterweisung durch, trag deinen Namen ein und beantworte danach {{ t.count }} Fragen. Ab {{ t.pass_min }} richtigen Antworten bekommst du deinen Nachweis als PDF.</p>
+  <ol class="steps">
+    <li><span>1</span>Inhalte lesen</li>
+    <li><span>2</span>Name eintragen</li>
+    <li><span>3</span>{{ t.count }} Fragen beantworten</li>
+    <li><span>4</span>Nachweis herunterladen</li>
+  </ol>
+</section>
+
+<section class="card">
+  <h2>Inhalte der Unterweisung</h2>
+  <div class="accordion">
+    {% for heading, items in t.content %}
+    <details {% if loop.first %}open{% endif %}>
+      <summary>{{ heading }}</summary>
+      <ul>
+        {% for item in items %}<li>{{ item }}</li>{% endfor %}
+      </ul>
+    </details>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card" id="start">
+  <h2>Zum Test</h2>
+  {% if errors %}
+  <div class="alert alert-error">
+    {% for e in errors %}<p>{{ e }}</p>{% endfor %}
+  </div>
+  {% endif %}
+  <form method="post" action="{{ url_for('start', slug=t.slug) }}" class="name-form">
+    <div class="field-row">
+      <label>Vorname
+        <input name="first_name" value="{{ form.first_name or '' }}" required minlength="2" maxlength="60" autocomplete="given-name">
+      </label>
+      <label>Nachname
+        <input name="last_name" value="{{ form.last_name or '' }}" required minlength="2" maxlength="60" autocomplete="family-name">
+      </label>
+    </div>
+    <label class="check">
+      <input type="checkbox" name="read" value="1" required>
+      <span>Ich habe die Inhalte der Unterweisung gelesen und verstanden.</span>
+    </label>
+    <button class="btn" type="submit">Test starten</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Mein Konto{% endblock %}
+{% block content %}
+<section class="hero hero-compact">
+  <p class="eyebrow">Mein Konto</p>
+  <h1>{{ current_user.name or current_user.username }}</h1>
+  <p class="lead">Angemeldet als <strong>{{ current_user.username }}</strong> · {{ 'Admin' if current_user.role == 'admin' else 'Verwalter' }}</p>
+</section>
+{% include "_flash.html" %}
+<section class="card narrow" id="zwei-faktor">
+  <h2>Zwei-Faktor-Anmeldung</h2>
+  {% if current_user.totp_secret %}
+    <p class="done-line">✓ Aktiv. Beim Anmelden wird ein Code aus deiner Authenticator-App abgefragt.</p>
+    <p class="hint">Noch {{ codes_left }} Wiederherstellungscode{{ 's' if codes_left != 1 }} übrig.</p>
+    <form method="post" action="{{ url_for('admin_2fa_codes') }}" class="name-form spaced">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <label>Passwort zur Bestätigung <input type="password" name="current" required autocomplete="current-password"></label>
+      <div class="actions tight">
+        <button class="btn btn-ghost" type="submit">Neue Wiederherstellungscodes</button>
+        <button class="btn btn-dark" type="submit" formaction="{{ url_for('admin_2fa_disable') }}" onclick="return confirm('Zwei-Faktor-Anmeldung wirklich ausschalten?');">Ausschalten</button>
+      </div>
+    </form>
+  {% else %}
+    <p class="muted">Schütze dein Konto zusätzlich mit einem Code aus einer Authenticator-App. Selbst wer dein Passwort kennt, kommt dann nicht hinein.</p>
+    <a class="btn" href="{{ url_for('admin_2fa_setup') }}">Jetzt einrichten</a>
+  {% endif %}
+</section>
+
+<section class="card narrow">
+  <h2>Passwort ändern</h2>
+  {% if errors %}<div class="alert alert-error">{% for e in errors %}<p>{{ e }}</p>{% endfor %}</div>{% endif %}
+  <form method="post" class="name-form">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <label>Aktuelles Passwort <input type="password" name="current" required autocomplete="current-password"></label>
+    <label>Neues Passwort <input type="password" name="password" required minlength="10" autocomplete="new-password"></label>
+    <label>Neues Passwort wiederholen <input type="password" name="password2" required minlength="10" autocomplete="new-password"></label>
+    <button class="btn" type="submit">Passwort ändern</button>
+  </form>
+</section>
+{% endblock %}

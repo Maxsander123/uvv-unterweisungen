@@ -53,6 +53,34 @@ SMTP_FROM = os.environ.get("SMTP_FROM", SMTP_USER)
 MAIL_COOLDOWN = timedelta(minutes=int(os.environ.get("MAIL_COOLDOWN_MINUTES", "10")))
 MAIL_ENABLED = bool(SMTP_HOST and SMTP_FROM)
 
+# Projekt, Version und Changelog für die Seite „Über“
+PROJECT_URL = "https://github.com/siliconserver/uvv-unterweisungen"
+APP_COMMIT = os.environ.get("APP_COMMIT", "")  # wird beim Bauen des Images gesetzt
+
+
+def load_changelog():
+    """Liest CHANGELOG.md (Abschnitte "## <Version> (<Datum>)" mit "- " Punkten)."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    for path in (os.path.join(here, "CHANGELOG.md"), os.path.join(here, "..", "CHANGELOG.md")):
+        if os.path.exists(path):
+            break
+    else:
+        return []
+    entries = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("## "):
+                version, _, date = line[3:].strip().partition(" ")
+                entries.append({"version": version, "date": date.strip("()"), "items": []})
+            elif line.startswith("- ") and entries:
+                entries[-1]["items"].append(line[2:].strip())
+    return entries
+
+
+CHANGELOG = load_changelog()
+APP_VERSION = CHANGELOG[0]["version"] if CHANGELOG else "unbekannt"
+
 ROLES = {
     "admin": "Admin – alles inkl. Benutzerverwaltung",
     "verwalter": "Verwalter – Unterweisungen und Nachweise",
@@ -437,7 +465,7 @@ def inject_globals():
     return {"cfg": cfg, "org_name": cfg["org_name"], "app_name": cfg["app_name"],
             "theme": theme_colors(cfg["primary_color"]), "logo_v": logo_version(),
             "year": datetime.now(TZ).year, "current_user": g.get("user"), "csrf_token": csrf_token,
-            "roles": ROLES, "interval_label": interval_label}
+            "roles": ROLES, "interval_label": interval_label, "app_version": APP_VERSION}
 
 
 def _safe_next(value):
@@ -1293,6 +1321,12 @@ def favicon():
     if os.path.exists(LOGO_PATH):
         return redirect(url_for("logo"), code=302)
     abort(404)
+
+
+@app.get("/ueber")
+def about():
+    return render_template("about.html", changelog=CHANGELOG, project_url=PROJECT_URL,
+                           commit=APP_COMMIT, commit_short=APP_COMMIT[:7])
 
 
 @app.get("/healthz")

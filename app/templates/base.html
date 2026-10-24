@@ -51,6 +51,7 @@
       <span class="footer-links">
         {% if cfg.impressum_url %}<a href="{{ cfg.impressum_url }}" target="_blank" rel="noopener">Impressum</a>{% endif %}
         {% if cfg.datenschutz_url %}<a href="{{ cfg.datenschutz_url }}" target="_blank" rel="noopener">Datenschutz</a>{% endif %}
+        <a href="{{ url_for('about') }}" title="Version, Changelog und Quellcode">Über · v{{ app_version }}</a>
         {% if not current_user %}<a href="{{ url_for('login') }}">Verwaltung</a>{% endif %}
       </span>
     </div>

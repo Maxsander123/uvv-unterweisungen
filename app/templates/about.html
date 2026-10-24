@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Über{% endblock %}
+{% block content %}
+<section class="hero hero-compact">
+  <p class="eyebrow">Über dieses System</p>
+  <h1>UVV Unterweisungen</h1>
+  <p class="lead">Online-Unterweisungen mit Wissenstest, Unterschrift und PDF-Nachweis. Freie Software unter der MIT-Lizenz, entstanden bei der Freiwilligen Feuerwehr Wörth am Rhein. Betrieben von {{ org_name }}.</p>
+</section>
+
+<section class="card">
+  <h2>Projekt auf GitHub</h2>
+  <ul class="about-links">
+    <li><a href="{{ project_url }}" target="_blank" rel="noopener">Quellcode und Anleitung (README)</a></li>
+    <li><a href="{{ project_url }}/releases" target="_blank" rel="noopener">Releases und Downloads</a></li>
+    <li><a href="{{ project_url }}/issues" target="_blank" rel="noopener">Fehler melden oder Wunsch äußern (Issues)</a></li>
+    <li><a href="{{ project_url }}/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog auf GitHub</a></li>
+    <li><a href="{{ project_url }}/blob/main/LICENSE" target="_blank" rel="noopener">Lizenz (MIT)</a></li>
+  </ul>
+</section>
+
+<section class="card">
+  <h2>Version {{ app_version }}</h2>
+  <p class="small">
+    {% if changelog and changelog[0].date %}Veröffentlicht am {{ changelog[0].date }}{% endif %}
+    {% if commit %} · Build <a href="{{ project_url }}/commit/{{ commit }}" target="_blank" rel="noopener" class="mono">{{ commit_short }}</a>{% endif %}
+    · <a href="{{ project_url }}/releases/tag/v{{ app_version }}" target="_blank" rel="noopener">Release auf GitHub</a>
+  </p>
+  <h3>Changelog</h3>
+  {% for entry in changelog %}
+  <div class="changelog-entry">
+    <h4>Version {{ entry.version }}{% if entry.date %} <small>({{ entry.date }})</small>{% endif %}</h4>
+    <ul>
+      {% for item in entry["items"] %}<li>{{ item }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% else %}
+  <p>Kein Changelog vorhanden.</p>
+  {% endfor %}
+</section>
+{% endblock %}

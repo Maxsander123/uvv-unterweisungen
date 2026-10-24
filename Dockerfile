@@ -9,6 +9,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ .
+COPY CHANGELOG.md .
 
 # Leserechte für alle App-Dateien sicherstellen, egal mit welchen Rechten sie auf dem Host liegen
 RUN chmod -R a+rX /app \
@@ -16,6 +17,10 @@ RUN chmod -R a+rX /app \
  && mkdir -p /data && chown uvv:uvv /data
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Commit, aus dem das Image gebaut wurde (setzt der GitHub-Workflow, erscheint auf der Seite „Über“)
+ARG APP_COMMIT=""
+ENV APP_COMMIT=${APP_COMMIT}
 
 EXPOSE 8000
 

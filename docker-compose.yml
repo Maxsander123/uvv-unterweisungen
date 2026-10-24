@@ -2,8 +2,11 @@
 # Alle Einstellungen und Zugangsdaten stehen in der Datei .env (Vorlage: .env.example).
 services:
   uvv-unterweisungen:
+    # Fertiges Image aus der GitHub Container Registry (`docker compose pull`),
+    # oder lokal aus dem Quellcode bauen mit `docker compose up -d --build`.
+    # Version über UVV_TAG in der .env (Standard: latest = neueste Version).
+    image: ghcr.io/siliconserver/uvv-unterweisungen:${UVV_TAG:-latest}
     build: .
-    image: uvv-unterweisungen:latest
     container_name: uvv-unterweisungen
     restart: unless-stopped
     env_file: .env

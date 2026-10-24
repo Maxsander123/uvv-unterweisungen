@@ -23,23 +23,27 @@ Entstanden bei der Freiwilligen Feuerwehr Wörth am Rhein. Frei verwendbar unter
 
 Eine Beispiel-Unterweisung „Sicherer Umgang mit Drohnen“ (BOS-Drohnen nach § 21k LuftVO, DGUV) ist enthalten und zunächst nicht freigeschaltet.
 
-## Voraussetzungen
+## Auf dem eigenen Server starten
 
-- Ein Linux-Server mit [Docker](https://docs.docker.com/engine/install/) und Docker Compose (Befehl `docker compose`)
-- Eine Domain bzw. Subdomain, z. B. `uvv.feuerwehr-musterstadt.de`
+Du brauchst:
+
+- einen Linux-Server (auch Raspberry Pi oder NAS) mit [Docker](https://docs.docker.com/engine/install/) und Docker Compose (Befehl `docker compose`)
+- eine Domain bzw. Subdomain, z. B. `uvv.feuerwehr-musterstadt.de`
 - HTTPS über einen Reverse Proxy (z. B. Traefik, Caddy, nginx). Die App selbst spricht nur HTTP auf Port 8000. Ohne HTTPS funktioniert die Anmeldung zur Verwaltung nicht (siehe [Lokal ausprobieren](#lokal-ausprobieren)).
-- Optional: ein Mailpostfach mit SMTP-Zugang für den Versand der Nachweise
+- optional ein Mailpostfach mit SMTP-Zugang für den Versand der Nachweise
 
-## Installation
+Das fertige Docker-Image liegt in der GitHub Container Registry unter `ghcr.io/siliconserver/uvv-unterweisungen` (für amd64 und arm64). Den Quellcode musst du dafür nicht bauen.
 
-**1. Code holen**
+**1. Herunterladen**
+
+Die aktuelle Version unter [Releases](https://github.com/siliconserver/uvv-unterweisungen/releases/latest) als ZIP oder tar.gz laden und auf dem Server entpacken, z. B. nach `/opt/uvv-unterweisungen`. Gebraucht werden daraus nur `docker-compose.yml` und `.env.example`. Alternativ:
 
 ```bash
-git clone https://github.com/<benutzer>/uvv-unterweisungen.git /opt/uvv-unterweisungen
+git clone https://github.com/siliconserver/uvv-unterweisungen.git /opt/uvv-unterweisungen
 cd /opt/uvv-unterweisungen
 ```
 
-**2. Konfiguration anlegen**
+**2. Einstellungen anlegen**
 
 ```bash
 cp .env.example .env
@@ -54,13 +58,15 @@ Mindestens diese Werte eintragen:
 | `DOMAIN` | `uvv.feuerwehr-musterstadt.de` | Adresse ohne `https://`. Sie steht im QR-Code jedes Nachweises und sollte später nicht mehr geändert werden. |
 | `ADMIN_PASSWORD` | ein langes eigenes Passwort | Passwort des ersten Admins (mindestens 10 Zeichen) |
 | `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | | Mailversand. Leer lassen, wenn keine Mails verschickt werden sollen. |
+| `UVV_TAG` | `latest` oder `1.1` | Version des Images. `latest` ist immer die neueste. |
 
-Alle weiteren Werte sind in der `.env.example` erklärt. Die `.env` enthält Passwörter und wird nicht ins Git eingecheckt.
+Alle weiteren Werte sind in der `.env.example` erklärt. Die `.env` enthält Passwörter und gehört nicht ins Git.
 
 **3. Starten**
 
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 docker compose logs -f        # Strg+C zum Beenden der Anzeige
 ```
 
@@ -91,16 +97,22 @@ Danach den Link zur Startseite an die Teilnehmer schicken.
 - Jeder Nachweis speichert den Stand der Unterweisung beim Bestehen. Spätere Änderungen verändern alte Nachweise nicht.
 - Unterweisungen mit Nachweisen lassen sich nicht löschen, nur deaktivieren.
 
-## Update
+## Aktualisieren
+
+Im Ordner mit der `docker-compose.yml`:
 
 ```bash
-cd /opt/uvv-unterweisungen
-cp data/uvv.db ~/uvv-backup-$(date +%F).db
-git pull
-docker compose up -d --build
+cp data/uvv.db ~/uvv-backup-$(date +%F).db     # vorher sichern
+docker compose pull && docker compose up -d
 ```
 
-Neue Tabellen und Spalten werden beim Start automatisch ergänzt, vorhandene Daten bleiben erhalten.
+Neue Tabellen und Spalten werden beim Start automatisch ergänzt, vorhandene Daten bleiben erhalten. Steht in der `.env` `UVV_TAG=latest`, läuft danach die neueste Version. Wer bei einer festen Version bleiben will, trägt sie dort ein (z. B. `UVV_TAG=1.1`) und erhöht sie bei Bedarf.
+
+Was sich geändert hat, steht im [Changelog](CHANGELOG.md), unter [Releases](https://github.com/siliconserver/uvv-unterweisungen/releases) und in der App unter „Über“ (Link unten in der Fußzeile). Dort stehen auch die installierte Version und Links zum Quellcode und zu den Issues.
+
+### Von einer selbst gebauten Installation umsteigen
+
+Wer bisher mit `docker compose up -d --build` aus dem Quellcode gebaut hat, tauscht nur die `docker-compose.yml` gegen die aktuelle aus (eigene Anpassungen wie Traefik-Labels übernehmen) und ergänzt `UVV_TAG=latest` in der `.env`. Danach `docker compose pull && docker compose up -d`. Der Datenordner (`DATA_PATH`) bleibt unverändert, alle Unterweisungen, Nachweise und Benutzer sind danach wieder da.
 
 ## Backup
 
@@ -150,11 +162,17 @@ cd app && DATA_DIR=../data ADMIN_PASSWORD=einlangespasswort flask --app app run 
 | Mail-Knopf fehlt | `SMTP_HOST` nicht gesetzt oder bei der Unterweisung keine Mailempfänger eingetragen |
 | Mailversand schlägt fehl | `docker compose logs uvv-unterweisungen \| grep -A5 Mailversand` |
 | QR-Code zeigt eine falsche Adresse | `DOMAIN` in der `.env` prüfen |
+| `docker compose pull` meldet „denied“ oder „unauthorized“ | Mit `docker logout ghcr.io` eine alte Anmeldung entfernen. Das Image ist öffentlich und braucht keine Anmeldung. |
 | Datenordner nicht beschreibbar | Das Startskript setzt die Rechte selbst. Läuft der Container ohne root: `sudo chown -R 1000:1000 <DATA_PATH>` |
 
-## Technik
+## Selbst bauen und mitentwickeln
 
 Python 3.12, Flask, SQLite, reportlab (PDF), pyotp (2FA), gunicorn, Docker. Der Code liegt in `app/`: `app.py` (Anwendung), `pdf.py` (Nachweis), `seed_drohne.py` (Beispiel-Unterweisung), `templates/`, `static/`.
+
+- Image lokal aus dem Quellcode bauen statt herunterladen: `docker compose up -d --build`
+- Jeder Push auf `main` baut das Image `ghcr.io/siliconserver/uvv-unterweisungen:main`.
+- **Neue Version veröffentlichen:** oben in der [CHANGELOG.md](CHANGELOG.md) einen Abschnitt `## <Version> (<Datum>)` mit Punkten `- …` ergänzen und auf `main` mergen. Daraus entstehen automatisch der Git-Tag `v<Version>`, ein GitHub-Release mit diesen Punkten als Text und die Image-Tags `:<Version>` und `:latest`. Die oberste Version ist zugleich die Versionsnummer in der App.
+- Fehler und Wünsche bitte als [Issue](https://github.com/siliconserver/uvv-unterweisungen/issues) melden.
 
 ## Lizenz
 
